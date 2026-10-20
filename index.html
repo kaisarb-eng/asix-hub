@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e6ebf2;--lt:#fff;--dk:#c3cbd9;--tx:#2b3445;--mu:#8a94a6;--ac:#4fb3d1}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Nunito,system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:460px;margin:0 auto;padding:20px 16px 48px}
+.card{background:var(--bg);border-radius:32px;padding:28px 22px;box-shadow:12px 12px 28px var(--dk),-12px -12px 28px var(--lt)}
+.logo{width:92px;height:92px;border-radius:50%;margin:0 auto 10px;display:grid;place-items:center;overflow:hidden;background:#fff;box-shadow:5px 5px 12px var(--dk),-5px -5px 12px var(--lt)}
+.logo img{width:100%;height:100%;object-fit:cover}
+.logo.s{width:48px;height:48px;margin:0}
+h1{text-align:center;margin:6px 0 2px;font-size:22px}
+.tag{text-align:center;color:var(--mu);font-size:12px;letter-spacing:.14em;margin:0 0 22px}
+.in{display:flex;align-items:center;gap:10px;min-height:52px;border-radius:26px;padding:0 18px;margin:14px 0;box-shadow:inset 5px 5px 10px var(--dk),inset -5px -5px 10px var(--lt)}
+.in input,.in select{flex:1;border:0;background:none;outline:0;font:inherit;font-size:16px;color:var(--tx);min-width:0;height:50px}
+.btn{display:block;width:100%;height:52px;border:0;border-radius:26px;background:var(--ac);color:#fff;font:800 17px Nunito,sans-serif;box-shadow:5px 5px 12px var(--dk),-3px -3px 8px var(--lt);cursor:pointer}
+.btn:disabled{opacity:.6}
+.btn.sm{display:inline-block;width:auto;height:44px;padding:0 16px;font-size:14px;margin:4px 4px 0 0}
+.btn.gr{background:var(--bg);color:var(--tx)}.btn.rd{background:#e5484d}.btn.wa{background:#25a244}
+.lk{background:none;border:0;color:var(--mu);font:inherit;font-weight:800;cursor:pointer;padding:10px 6px;min-height:44px}
+.hd{display:flex;align-items:center;gap:12px;margin-bottom:18px}.hd b{flex:1;font-size:20px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 16px}
+.tabs button{flex:none;height:44px;padding:0 16px;border:0;border-radius:22px;background:var(--bg);color:var(--mu);font:800 14px Nunito;box-shadow:4px 4px 8px var(--dk),-4px -4px 8px var(--lt)}
+.tabs button.on{color:var(--ac);box-shadow:inset 3px 3px 7px var(--dk),inset -3px -3px 7px var(--lt)}
+.pill{display:flex;align-items:center;width:100%;height:64px;border:0;border-radius:32px;background:#fff;margin:0 0 18px;padding:0;overflow:hidden;box-shadow:3px 4px 10px rgba(60,70,100,.28);cursor:pointer;font:800 19px Nunito}
+.pill .ic{width:88px;height:100%;display:grid;place-items:center;font-size:24px;background:var(--c);clip-path:polygon(0 0,100% 0,80% 100%,0 100%)}
+.pill .t{flex:1;text-align:left;padding-left:14px;color:var(--c)}
+.pill.off{filter:grayscale(1);opacity:.55}
+.row{background:var(--bg);border-radius:20px;padding:14px 16px;margin-bottom:14px;box-shadow:5px 5px 10px var(--dk),-5px -5px 10px var(--lt)}
+.row small{color:var(--mu);display:block;word-break:break-all}
+.ov{position:fixed;inset:0;background:rgba(40,50,70,.45);display:grid;place-items:center;padding:16px;z-index:9;overflow:auto}
+.md{background:var(--bg);border-radius:28px;padding:22px;width:100%;max-width:420px}
+#to{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b3445;color:#fff;padding:12px 18px;border-radius:24px;z-index:99;max-width:90%;text-align:center;display:none}
+#to button{margin-left:10px;border:0;border-radius:14px;padding:6px 12px;font:800 13px Nunito;min-height:32px}
+@media(prefers-reduced-motion:no-preference){.btn,.pill{transition:transform .1s}.btn:active,.pill:active{transform:scale(.98)}}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="mo"></div><div id="to"></div>
+<script>
+/* WAJIB: isi dengan URL Web App Apps Script (berakhiran /exec) hasil deploy. */
+const API_URL='https://script.google.com/macros/s/AKfycbyctS199AhCm5vbLRh4FH6Trn1BZlvolsgr6pzPNBp9xzCtJ6d5ekZAqk0H-6JEtxVw/exec';
+/* Isi dengan link Vercel (mis. https://asix-hub.vercel.app) agar ikut terkirim di pesan WA. Boleh dikosongkan. */
+const APP_URL='';
+
+const $=s=>document.querySelector(s);
+const e=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ICO=['🎬','🎨','🎙️','✍️','📱','🛒','📚','✨'];
+const ST={pub:{title:'Asix Hub'},user:null,panels:[],users:[],view:[],tab:'home',flt:'pending',logo:''};
+let tmr;
+function toast(m,retry){const t=$('#to');t.innerHTML=e(m)+(retry?'<button id="rt">Coba lagi</button>':'');t.style.display='block';clearTimeout(tmr);
+ if(retry)$('#rt').onclick=()=>{t.style.display='none';retry();};else tmr=setTimeout(()=>t.style.display='none',3500);}
+function tok(){try{return localStorage.getItem('ah')||sessionStorage.getItem('ah')||''}catch(x){return ''}}
+function clr(){try{localStorage.removeItem('ah');sessionStorage.removeItem('ah')}catch(x){}}
+function store(t,r){clr();try{(r?localStorage:sessionStorage).setItem('ah',t)}catch(x){}}
+function call(fn,...a){
+ if(!API_URL)return new Promise(()=>toast('API_URL di index.html belum diisi.'));
+ return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:a})})
+  .then(r=>r.json())
+  .then(j=>{if(j&&j.error)throw new Error(j.error);return j?j.data:undefined;})
+  .catch(err=>{
+  const m=String(err&&err.message||err).replace(/^Error:\s*/,'');
+  if(/Sesi habis/.test(m)){clr();boot();toast(m);return new Promise(()=>{});}
+  return new Promise(res=>toast(/Khusus/.test(m)?m:'Koneksi bermasalah. '+m,()=>res(call(fn,...a))));
+ });
+}
+function logo(){return ST.pub.logo?`<img src="${ST.pub.logo}" alt="Logo">`:'<b style="font-size:30px;color:#f47a20">a6</b>';}
+function mdl(h){$('#mo').innerHTML=`<div class="ov"><div class="md">${h}</div></div>`;}
+function cls(){$('#mo').innerHTML='';}
+function fld(id,ph,v,t){return `<div class="in"><input id="${id}" placeholder="${e(ph)}" value="${e(v)}" type="${t||'text'}"></div>`;}
+function cf(msg,fn){window._cf=fn;mdl(`<p style="font-weight:700">${e(msg)}</p><button class="btn sm rd" onclick="cls();_cf()">Ya, hapus</button><button class="btn sm gr" onclick="cls()">Batal</button>`);}
+
+/* ---------- WhatsApp ---------- */
+function waNum(n){let d=String(n==null?'':n).replace(/\D/g,'');if(d.startsWith('0'))d='62'+d.slice(1);else if(d.startsWith('8'))d='62'+d;return d;}
+function waOpen(u,pw){
+ const n=waNum(u.no_wa);
+ if(n.length<10)return toast('No WA member belum valid.');
+ const m=`Halo ${u.nama}, pendaftaran kamu di ${ST.pub.title} sudah disetujui.\n\nID: ${u.id}`+(pw?`\nPassword: ${pw}`:'')+(APP_URL?`\n\nLogin di: ${APP_URL}`:'')+`\n\nSimpan baik-baik ya. Terima kasih.`;
+ window.open('https://wa.me/'+n+'?text='+encodeURIComponent(m),'_blank');
+}
+
+function boot(){
+ $('#app').innerHTML='<p style="text-align:center;margin-top:40vh;color:var(--mu)">Memuat…</p>';
+ const t=tok();
+ (t?call('home',t):call('pub').then(p=>({pub:p}))).then(r=>{
+  ST.pub=r.pub;
+  if(r.user){ST.user=r.user;ST.panels=r.panels;ST.tab='home';home();}else login();
+ });
+}
+
+/* ---------- login & daftar ---------- */
+function login(){
+ $('#app').innerHTML=`<div class="wrap" style="padding-top:40px"><div class="card"><div class="logo">${logo()}</div>
+ <h1>${e(ST.pub.title)}</h1><p class="tag">Asix Selalu Itu Keren</p>
+ <div class="in"><span>👤</span><input id="i1" placeholder="ID atau email" autocomplete="username"></div>
+ <div class="in"><span>🔒</span><input id="i2" type="password" placeholder="Password" autocomplete="current-password"><span id="ey" onclick="eye()" style="cursor:pointer;padding:10px">👁️</span></div>
+ <label style="display:flex;gap:10px;align-items:center;margin:0 0 14px 8px;min-height:44px"><input type="checkbox" id="rm" style="width:20px;height:20px"> Ingat saya</label>
+ <button class="btn" id="lb" onclick="doLogin()">Login</button>
+ <p style="text-align:center;margin:14px 0 0;color:var(--mu)"><button class="lk" onclick="toast('Lupa password? Hubungi admin Asix Hub.')">Lupa password?</button> atau <button class="lk" onclick="reg()">Daftar</button></p></div></div>`;
+}
+function eye(){const i=$('#i2');i.type=i.type=='password'?'text':'password';$('#ey').textContent=i.type=='password'?'👁️':'🙈';}
+document.addEventListener('keydown',ev=>{if(ev.key=='Enter'&&ev.target.id=='i2')doLogin();});
+async function doLogin(){
+ const b=$('#lb');b.disabled=true;
+ const r=await call('login',$('#i1').value,$('#i2').value,$('#rm').checked);
+ b.disabled=false;
+ if(!r.ok)return toast(r.msg);
+ store(r.token,r.remember);boot();
+}
+function reg(){
+ $('#app').innerHTML=`<div class="wrap" style="padding-top:40px"><div class="card"><div class="logo">${logo()}</div>
+ <h1>Daftar member</h1><p class="tag">Menunggu persetujuan admin</p>
+ ${fld('r1','Nama lengkap','')}${fld('r2','Email','','email')}${fld('r3','No WA (angka saja)','','tel')}
+ <button class="btn" id="rb" onclick="doReg()">Daftar</button>
+ <p style="text-align:center;margin:14px 0 0"><button class="lk" onclick="login()">Kembali ke login</button></p></div></div>`;
+}
+async function doReg(){
+ const d={nama:$('#r1').value,email:$('#r2').value,no_wa:$('#r3').value};
+ const b=$('#rb');b.disabled=true;const r=await call('register',d);b.disabled=false;
+ toast(r.msg);if(r.ok)login();
+}
+
+/* ---------- dashboard ---------- */
+function home(){
+ const a=ST.user.role=='admin';
+ const T=[['home','Dashboard'],['users','Member'],['panel','Kelola Panel'],['set','Pengaturan']];
+ $('#app').innerHTML=`<div class="wrap"><div class="hd"><div class="logo s">${logo()}</div><b>${e(ST.pub.title)}</b><button class="btn sm gr" onclick="out()">Keluar</button></div>
+ <p style="margin:0 0 14px;color:var(--mu)">Halo, ${e(ST.user.nama)}</p>
+ ${a?`<div class="tabs">${T.map(t=>`<button class="${ST.tab==t[0]?'on':''}" onclick="tab('${t[0]}')">${t[1]}</button>`).join('')}</div>`:''}
+ <div id="bd"></div></div>`;
+ ({home:bHome,users:bUsers,panel:bPanel,set:bSet})[ST.tab]();
+}
+async function out(){const t=tok();clr();ST.user=null;call('logout',t);boot();}
+async function tab(n){ST.tab=n;if(n=='users')ST.users=await call('users',tok());home();}
+async function reload(){const r=await call('home',tok());ST.panels=r.panels;ST.pub=r.pub;home();}
+
+function bHome(){
+ $('#bd').innerHTML=ST.panels.map((p,i)=>{const on=p.status=='aktif'&&p.link;
+  return `<button class="pill ${on?'':'off'}" style="--c:${e(p.warna)}" onclick="op(${i})"><span class="ic">${ICO[i%8]}</span><span class="t">${e(p.judul)}</span></button>`;}).join('')||'<p style="color:var(--mu)">Belum ada panel.</p>';
+}
+function op(i){const p=ST.panels[i];if(p.status=='aktif'&&p.link)window.open(p.link,'_blank');else toast('Coming soon');}
+
+/* ---------- admin: member ---------- */
+function bUsers(){
+ ST.view=ST.users.filter(u=>u.status==ST.flt);
+ const S=['pending','approved','rejected','nonaktif'];
+ $('#bd').innerHTML=`<div class="in"><select onchange="ST.flt=this.value;bUsers()">${S.map(s=>`<option ${s==ST.flt?'selected':''}>${s}</option>`).join('')}</select></div>`+
+ (ST.view.map((u,i)=>{
+  const adm=u.role=='admin',B=(l,f,c)=>`<button class="btn sm ${c||''}" onclick="${f}">${l}</button>`;
+  let b='';
+  if(u.status=='pending'||u.status=='rejected')b+=B('Setujui',`fm('approve',${i})`);
+  if(u.status=='pending')b+=B('Tolak',`ua('reject',${i})`,'rd');
+  if(u.status=='approved'&&!adm)b+=B('Nonaktifkan',`ua('nonaktif',${i})`,'rd');
+  if(u.status=='nonaktif')b+=B('Aktifkan',`ua('aktif',${i})`);
+  if(u.status=='approved'||u.status=='nonaktif')b+=B('Ubah',`fm('edit',${i})`,'gr');
+  if(u.status=='approved'&&!adm&&u.no_wa)b+=B('Kirim WA',`waOpen(ST.view[${i}])`,'wa');
+  return `<div class="row"><b>${e(u.nama)}</b> ${adm?'(admin)':''}<small>${e(u.email)} · ${e(u.no_wa)}</small><small>ID: ${e(u.id)||'-'}</small><div>${b}</div></div>`;
+ }).join('')||'<p style="color:var(--mu)">Tidak ada data.</p>');
+}
+function fm(act,i){
+ const u=ST.view[i];
+ mdl(`<h3 style="margin-top:0">${act=='approve'?'Setujui member':'Ubah data'}</h3>${fld('f1','Nama',u.nama)}${fld('f2','No WA',u.no_wa)}${fld('f3','ID login',u.id)}
+ ${fld('f4',act=='approve'?'Password awal':'Password baru (kosong = tidak diubah)','')}
+ <button class="btn sm" onclick="sv('${act}',${i})">Simpan</button><button class="btn sm gr" onclick="cls()">Batal</button>`);
+}
+async function sv(act,i){
+ const u=ST.view[i],d={nama:$('#f1').value,no_wa:$('#f2').value,id:$('#f3').value,password:$('#f4').value};
+ const r=await call('userAct',tok(),act,u.email,d);
+ if(!r.ok)return toast(r.msg);
+ const w={nama:d.nama||u.nama,id:d.id||u.id,no_wa:d.no_wa||u.no_wa};
+ tab('users');
+ if(act=='approve'||d.password){
+  window._w=[w,d.password];
+  mdl(`<h3 style="margin-top:0">Tersimpan</h3><p>Kirim info login ke WA ${e(w.nama)} sekarang?</p>
+  <button class="btn sm wa" onclick="waOpen(_w[0],_w[1])">Kirim WA</button><button class="btn sm gr" onclick="cls()">Nanti saja</button>`);
+ }else{cls();toast('Tersimpan');}
+}
+async function ua(act,i){const r=await call('userAct',tok(),act,ST.view[i].email,{});if(!r.ok)return toast(r.msg);tab('users');}
+
+/* ---------- admin: panel ---------- */
+function bPanel(){
+ $('#bd').innerHTML=`<button class="btn" onclick="pm(-1)" style="margin-bottom:16px">+ Tambah panel</button>`+ST.panels.map((p,i)=>
+ `<div class="row" style="border-left:8px solid ${e(p.warna)}"><b>${e(p.judul)}</b><small>${e(p.status)} · urutan ${e(p.urutan)}</small><small>${e(p.link)||'(tanpa link)'}</small>
+ <button class="btn sm" onclick="pm(${i})">Ubah</button><button class="btn sm rd" onclick="pd(${i})">Hapus</button></div>`).join('');
+}
+function pm(i){
+ const p=i<0?{judul:'',link:'',status:'coming soon',warna:'#4a90e2',urutan:ST.panels.length+1}:ST.panels[i];
+ mdl(`<h3 style="margin-top:0">${i<0?'Tambah':'Ubah'} panel</h3>${fld('p1','Judul',p.judul)}${fld('p2','Link (https://...)',p.link)}
+ <div class="in"><select id="p3"><option ${p.status=='aktif'?'selected':''}>aktif</option><option ${p.status!='aktif'?'selected':''}>coming soon</option></select></div>
+ <div class="in"><span>Warna</span><input id="p4" type="color" value="${e(p.warna)}"></div>${fld('p5','Urutan',p.urutan,'number')}
+ <button class="btn sm" onclick="ps('${i<0?'':e(p.id)}')">Simpan</button><button class="btn sm gr" onclick="cls()">Batal</button>`);
+}
+async function ps(id){
+ const r=await call('panelSave',tok(),{id,judul:$('#p1').value,link:$('#p2').value,status:$('#p3').value,warna:$('#p4').value,urutan:$('#p5').value});
+ if(!r.ok)return toast(r.msg);cls();toast('Tersimpan');reload();
+}
+function pd(i){const p=ST.panels[i];cf(`Hapus panel "${p.judul}"?`,async()=>{await call('panelDel',tok(),p.id);reload();});}
+
+/* ---------- admin: pengaturan & logo ---------- */
+function bSet(){
+ ST.logo='';
+ $('#bd').innerHTML=`<div class="card"><p style="margin-top:0;font-weight:800">Judul aplikasi</p>${fld('s1','Judul aplikasi',ST.pub.title)}
+ <p style="font-weight:800">Logo (JPG/PNG/WEBP, otomatis dikompres &lt; 200 KB)</p>
+ <input type="file" accept="image/png,image/jpeg,image/webp" onchange="pick(this.files[0])" style="margin-bottom:12px">
+ <div class="logo" style="margin:0 auto 16px"><img id="pv" src="${ST.pub.logo||''}" style="${ST.pub.logo?'':'display:none'}" alt="Preview"></div>
+ <button class="btn" onclick="ss()">Simpan pengaturan</button></div>`;
+}
+function pick(f){
+ if(!f)return;
+ if(!/^image\/(png|jpeg|webp)$/.test(f.type))return toast('Format harus JPG, PNG, atau WEBP.');
+ const im=new Image();
+ im.onload=()=>{
+  const w=Math.min(512,im.width),h=Math.round(im.height*w/im.width),c=document.createElement('canvas');
+  c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
+  let q=.9,d;do{d=c.toDataURL('image/jpeg',q);q-=.1;}while(d.length*.75>200*1024&&q>.25);
+  if(d.length*.75>200*1024){ST.logo='';return toast('Hasil kompres masih di atas 200 KB. Pilih gambar lain.');}
+  ST.logo=d;const pv=$('#pv');pv.src=d;pv.style.display='block';
+ };
+ im.onerror=()=>toast('File bukan gambar yang valid.');
+ im.src=URL.createObjectURL(f);
+}
+async function ss(){
+ const r=await call('saveSettings',tok(),$('#s1').value,ST.logo);
+ if(!r.ok)return toast(r.msg);ST.pub=r.pub;toast('Tersimpan');home();
+}
+boot();
+</script>
+</body>
+</html>
