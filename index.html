@@ -17,6 +17,9 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://asix-hub.vercel.app/og-image.jpg">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#e6ebf2;--lt:#fff;--dk:#c3cbd9;--tx:#2b3445;--mu:#8a94a6;--ac:#4fb3d1}
@@ -35,6 +38,8 @@ h1{text-align:center;margin:6px 0 2px;font-size:22px}
 .btn:disabled{opacity:.6}
 .btn.sm{display:inline-block;width:auto;height:44px;padding:0 16px;font-size:14px;margin:4px 4px 0 0}
 .btn.gr{background:var(--bg);color:var(--tx)}.btn.rd{background:#e5484d}.btn.wa{background:#25a244}
+.hint{font-size:13px;line-height:1.55;color:var(--mu);border-radius:20px;padding:12px 16px;margin:14px 0 0;box-shadow:inset 4px 4px 8px var(--dk),inset -4px -4px 8px var(--lt)}
+.hint b{color:var(--tx)}
 .lk{background:none;border:0;color:var(--mu);font:inherit;font-weight:800;cursor:pointer;padding:10px 6px;min-height:44px}
 .hd{display:flex;align-items:center;gap:12px;margin-bottom:18px}.hd b{flex:1;font-size:20px}
 .tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 16px}
@@ -69,15 +74,28 @@ let tmr;
 function toast(m,retry){const t=$('#to');t.innerHTML=e(m)+(retry?'<button id="rt">Coba lagi</button>':'');t.style.display='block';clearTimeout(tmr);
  if(retry)$('#rt').onclick=()=>{t.style.display='none';retry();};else tmr=setTimeout(()=>t.style.display='none',3500);}
 function tok(){try{return localStorage.getItem('ah')||sessionStorage.getItem('ah')||''}catch(x){return ''}}
-function clr(){try{localStorage.removeItem('ah');sessionStorage.removeItem('ah')}catch(x){}}
+function clr(){try{localStorage.removeItem('ah');sessionStorage.removeItem('ah');localStorage.removeItem('ahc')}catch(x){}ST.pf=0;ST.uok=0;ST.busy=0;ST.users=[];}
+function lsg(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(x){return null}}
+function lss(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(x){}}
 function store(t,r){clr();try{(r?localStorage:sessionStorage).setItem('ah',t)}catch(x){}}
+const RO=['pub','home','users'];
+function raw(fn,a,n){
+ n=n||0;
+ const ac=new AbortController(),to=setTimeout(()=>ac.abort(),30000);
+ return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:a}),signal:ac.signal})
+  .then(r=>r.json())
+  .then(j=>{clearTimeout(to);if(j&&j.error){const x=new Error(j.error);x.srv=1;throw x;}return j?j.data:undefined;})
+  .catch(err=>{
+   clearTimeout(to);
+   if(!err.srv&&RO.includes(fn)&&n<2)return new Promise(r=>setTimeout(r,1200)).then(()=>raw(fn,a,n+1));
+   throw err;
+  });
+}
+function quiet(fn,...a){return API_URL?raw(fn,a).catch(()=>null):Promise.resolve(null);}
 function call(fn,...a){
  if(!API_URL)return new Promise(()=>toast('API_URL di index.html belum diisi.'));
- return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:a})})
-  .then(r=>r.json())
-  .then(j=>{if(j&&j.error)throw new Error(j.error);return j?j.data:undefined;})
-  .catch(err=>{
-  const m=String(err&&err.message||err).replace(/^Error:\s*/,'');
+ return raw(fn,a).catch(err=>{
+  const m=err&&err.name=='AbortError'?'Waktu tunggu habis.':String(err&&err.message||err).replace(/^Error:\s*/,'');
   if(/Sesi habis/.test(m)){clr();boot();toast(m);return new Promise(()=>{});}
   return new Promise(res=>toast(/Khusus/.test(m)?m:'Koneksi bermasalah. '+m,()=>res(call(fn,...a))));
  });
@@ -91,29 +109,48 @@ function cf(msg,fn){window._cf=fn;mdl(`<p style="font-weight:700">${e(msg)}</p><
 /* ---------- WhatsApp ---------- */
 function waNum(n){let d=String(n==null?'':n).replace(/\D/g,'');if(d.startsWith('0'))d='62'+d.slice(1);else if(d.startsWith('8'))d='62'+d;return d;}
 function waOpen(u,pw){
+ pw=pw||u.password;
  const n=waNum(u.no_wa);
- if(n.length<10)return toast('No WA member belum valid.');
+ if(n.length<10){toast('No WA member belum valid.');return false;}
  const m=`Halo ${u.nama}, pendaftaran kamu di ${ST.pub.title} sudah disetujui.\n\nID: ${u.id}`+(pw?`\nPassword: ${pw}`:'')+(APP_URL?`\n\nLogin di: ${APP_URL}`:'')+`\n\nSimpan baik-baik ya. Terima kasih.`;
  window.open('https://wa.me/'+n+'?text='+encodeURIComponent(m),'_blank');
+ return true;
 }
 
+function applyPub(){const a=$('#lg'),b=$('#ti');if(a)a.innerHTML=logo();if(b)b.textContent=ST.pub.title;}
 function boot(){
+ const t=tok(),c=lsg('ahc'),p=lsg('ahp');
+ if(t&&c&&c.user){
+  ST.pub=c.pub;ST.user=c.user;ST.panels=c.panels;ST.tab='home';home();
+  call('home',t).then(r=>{
+   if(!tok()||!r||!r.user)return;
+   const ch=JSON.stringify(r)!=JSON.stringify(c);
+   ST.user=r.user;ST.panels=r.panels;ST.pub=r.pub;lss('ahc',r);lss('ahp',r.pub);
+   if(ch&&ST.tab=='home'&&!$('#mo').innerHTML)home();
+  });
+  return;
+ }
+ if(!t&&p){
+  ST.pub=p;login();
+  call('pub').then(x=>{ST.pub=x;lss('ahp',x);applyPub();});
+  return;
+ }
  $('#app').innerHTML='<p style="text-align:center;margin-top:40vh;color:var(--mu)">Memuat…</p>';
- const t=tok();
- (t?call('home',t):call('pub').then(p=>({pub:p}))).then(r=>{
-  ST.pub=r.pub;
-  if(r.user){ST.user=r.user;ST.panels=r.panels;ST.tab='home';home();}else login();
+ (t?call('home',t):call('pub').then(x=>({pub:x}))).then(r=>{
+  ST.pub=r.pub;lss('ahp',r.pub);
+  if(r.user){ST.user=r.user;ST.panels=r.panels;ST.tab='home';lss('ahc',r);home();}else login();
  });
 }
 
 /* ---------- login & daftar ---------- */
 function login(){
- $('#app').innerHTML=`<div class="wrap" style="padding-top:40px"><div class="card"><div class="logo">${logo()}</div>
- <h1>${e(ST.pub.title)}</h1><p class="tag">Asix Selalu Itu Keren</p>
+ $('#app').innerHTML=`<div class="wrap" style="padding-top:40px"><div class="card"><div class="logo" id="lg">${logo()}</div>
+ <h1 id="ti">${e(ST.pub.title)}</h1><p class="tag">Asix Selalu Itu Keren</p>
  <div class="in"><span>👤</span><input id="i1" placeholder="ID atau email" autocomplete="username"></div>
  <div class="in"><span>🔒</span><input id="i2" type="password" placeholder="Password" autocomplete="current-password"><span id="ey" onclick="eye()" style="cursor:pointer;padding:10px">👁️</span></div>
  <label style="display:flex;gap:10px;align-items:center;margin:0 0 14px 8px;min-height:44px"><input type="checkbox" id="rm" style="width:20px;height:20px"> Ingat saya</label>
  <button class="btn" id="lb" onclick="doLogin()">Login</button>
+ <div class="hint"><b>Belum punya ID?</b> Klik <b>Daftar</b>, lalu isi identitas kamu (nama, email, dan no WA). ID dan password akan dikirim admin lewat WhatsApp setelah pendaftaran disetujui.</div>
  <p style="text-align:center;margin:14px 0 0;color:var(--mu)"><button class="lk" onclick="toast('Lupa password? Hubungi admin Asix Hub.')">Lupa password?</button> atau <button class="lk" onclick="reg()">Daftar</button></p></div></div>`;
 }
 function eye(){const i=$('#i2');i.type=i.type=='password'?'text':'password';$('#ey').textContent=i.type=='password'?'👁️':'🙈';}
@@ -123,11 +160,12 @@ async function doLogin(){
  const r=await call('login',$('#i1').value,$('#i2').value,$('#rm').checked);
  b.disabled=false;
  if(!r.ok)return toast(r.msg);
- store(r.token,r.remember);boot();
+ store(r.token,r.remember);
+ if(r.data&&r.data.user){const d=r.data;ST.user=d.user;ST.panels=d.panels;ST.pub=d.pub;ST.tab='home';lss('ahc',d);lss('ahp',d.pub);home();}else boot();
 }
 function reg(){
  $('#app').innerHTML=`<div class="wrap" style="padding-top:40px"><div class="card"><div class="logo">${logo()}</div>
- <h1>Daftar member</h1><p class="tag">Menunggu persetujuan admin</p>
+ <h1>Daftar member</h1><p class="tag">ID &amp; password dikirim lewat WA setelah disetujui</p>
  ${fld('r1','Nama lengkap','')}${fld('r2','Email','','email')}${fld('r3','No WA (angka saja)','','tel')}
  <button class="btn" id="rb" onclick="doReg()">Daftar</button>
  <p style="text-align:center;margin:14px 0 0"><button class="lk" onclick="login()">Kembali ke login</button></p></div></div>`;
@@ -141,6 +179,7 @@ async function doReg(){
 /* ---------- dashboard ---------- */
 function home(){
  const a=ST.user.role=='admin';
+ if(a&&!ST.pf){ST.pf=1;loadUsers();}
  const T=[['home','Dashboard'],['users','Member'],['panel','Kelola Panel'],['set','Pengaturan']];
  $('#app').innerHTML=`<div class="wrap"><div class="hd"><div class="logo s">${logo()}</div><b>${e(ST.pub.title)}</b><button class="btn sm gr" onclick="out()">Keluar</button></div>
  <p style="margin:0 0 14px;color:var(--mu)">Halo, ${e(ST.user.nama)}</p>
@@ -149,8 +188,8 @@ function home(){
  ({home:bHome,users:bUsers,panel:bPanel,set:bSet})[ST.tab]();
 }
 async function out(){const t=tok();clr();ST.user=null;call('logout',t);boot();}
-async function tab(n){ST.tab=n;if(n=='users')ST.users=await call('users',tok());home();}
-async function reload(){const r=await call('home',tok());ST.panels=r.panels;ST.pub=r.pub;home();}
+function tab(n){ST.tab=n;home();if(n=='users')loadUsers(true);}
+async function reload(){const r=await call('home',tok());ST.panels=r.panels;ST.pub=r.pub;lss('ahc',r);home();}
 
 function bHome(){
  $('#bd').innerHTML=ST.panels.map((p,i)=>{const on=p.status=='aktif'&&p.link;
@@ -159,41 +198,78 @@ function bHome(){
 function op(i){const p=ST.panels[i];if(p.status=='aktif'&&p.link)window.open(p.link,'_blank');else toast('Coming soon');}
 
 /* ---------- admin: member ---------- */
+function loadUsers(loud){
+ return (loud?call:quiet)('users',tok()).then(r=>{
+  if(!r)return;
+  ST.users=r;ST.uok=1;
+  if(ST.tab=='users')bUsers();
+ });
+}
 function bUsers(){
+ if(!ST.uok){$('#bd').innerHTML='<p style="color:var(--mu)">Memuat daftar member…</p>';return;}
  ST.view=ST.users.filter(u=>u.status==ST.flt);
  const S=['pending','approved','rejected','nonaktif'];
  $('#bd').innerHTML=`<div class="in"><select onchange="ST.flt=this.value;bUsers()">${S.map(s=>`<option ${s==ST.flt?'selected':''}>${s}</option>`).join('')}</select></div>`+
  (ST.view.map((u,i)=>{
   const adm=u.role=='admin',B=(l,f,c)=>`<button class="btn sm ${c||''}" onclick="${f}">${l}</button>`;
   let b='';
-  if(u.status=='pending'||u.status=='rejected')b+=B('Setujui',`fm('approve',${i})`);
+  if(u.status=='pending'||u.status=='rejected')b+=B('Setujui',`ap(${i})`);
   if(u.status=='pending')b+=B('Tolak',`ua('reject',${i})`,'rd');
   if(u.status=='approved'&&!adm)b+=B('Nonaktifkan',`ua('nonaktif',${i})`,'rd');
   if(u.status=='nonaktif')b+=B('Aktifkan',`ua('aktif',${i})`);
-  if(u.status=='approved'||u.status=='nonaktif')b+=B('Ubah',`fm('edit',${i})`,'gr');
+  if(u.status=='approved'||u.status=='nonaktif')b+=B('Ubah',`fm(${i})`,'gr');
   if(u.status=='approved'&&!adm&&u.no_wa)b+=B('Kirim WA',`waOpen(ST.view[${i}])`,'wa');
   return `<div class="row"><b>${e(u.nama)}</b> ${adm?'(admin)':''}<small>${e(u.email)} · ${e(u.no_wa)}</small><small>ID: ${e(u.id)||'-'}</small><div>${b}</div></div>`;
  }).join('')||'<p style="color:var(--mu)">Tidak ada data.</p>');
 }
-function fm(act,i){
- const u=ST.view[i];
- mdl(`<h3 style="margin-top:0">${act=='approve'?'Setujui member':'Ubah data'}</h3>${fld('f1','Nama',u.nama)}${fld('f2','No WA',u.no_wa)}${fld('f3','ID login',u.id)}
- ${fld('f4',act=='approve'?'Password awal':'Password baru (kosong = tidak diubah)','')}
- <button class="btn sm" onclick="sv('${act}',${i})">Simpan</button><button class="btn sm gr" onclick="cls()">Batal</button>`);
+function mine(email){return ST.users.find(z=>z.email==email);}
+function askWa(w,title){
+ window._w=w;
+ mdl(`<h3 style="margin-top:0">${e(title)}</h3><p style="margin:0 0 6px;font-weight:700">${e(w.nama)}</p>
+ <p style="margin:0 0 14px;color:var(--mu)">ID: <b style="color:var(--tx)">${e(w.id)}</b><br>Password: <b style="color:var(--tx)">${e(w.password)}</b></p>
+ <p style="font-weight:700">Kirim info login ke WA sekarang?</p>
+ <button class="btn sm wa" onclick="sendWa()">Kirim WA</button><button class="btn sm gr" onclick="later()">Nanti saja</button>`);
 }
-async function sv(act,i){
- const u=ST.view[i],d={nama:$('#f1').value,no_wa:$('#f2').value,id:$('#f3').value,password:$('#f4').value};
- const r=await call('userAct',tok(),act,u.email,d);
- if(!r.ok)return toast(r.msg);
- const w={nama:d.nama||u.nama,id:d.id||u.id,no_wa:d.no_wa||u.no_wa};
- tab('users');
- if(act=='approve'||d.password){
-  window._w=[w,d.password];
-  mdl(`<h3 style="margin-top:0">Tersimpan</h3><p>Kirim info login ke WA ${e(w.nama)} sekarang?</p>
-  <button class="btn sm wa" onclick="waOpen(_w[0],_w[1])">Kirim WA</button><button class="btn sm gr" onclick="cls()">Nanti saja</button>`);
- }else{cls();toast('Tersimpan');}
+function sendWa(){const w=window._w;cls();if(waOpen(w,w.password))toast('WA dibuka untuk '+w.nama+'. Silakan kirim pesannya.');}
+function later(){cls();toast('Oke. Kirim nanti lewat tombol Kirim WA di daftar approved.');}
+async function ap(i){
+ if(ST.busy)return;
+ const u=ST.view[i];if(!u)return;
+ ST.busy=1;toast('Memproses…');
+ const r=await call('userAct',tok(),'approve',u.email,{});
+ ST.busy=0;
+ if(!r||!r.ok)return toast(r?r.msg:'Gagal memproses.');
+ $('#to').style.display='none';
+ const x=mine(u.email);if(x){x.status='approved';x.id=r.id;x.password=r.password;}
+ bUsers();
+ askWa({nama:r.nama,id:r.id,no_wa:r.no_wa,password:r.password},'Disetujui');
+ loadUsers();
 }
-async function ua(act,i){const r=await call('userAct',tok(),act,ST.view[i].email,{});if(!r.ok)return toast(r.msg);tab('users');}
+function fm(i){
+ const u=ST.view[i];window._u=u;
+ mdl(`<h3 style="margin-top:0">Ubah data</h3>${fld('f1','Nama',u.nama)}${fld('f2','No WA',u.no_wa)}${fld('f3','ID login',u.id)}
+ ${fld('f4','Password baru (kosong = tidak diubah)','')}
+ <button class="btn sm" onclick="sv()">Simpan</button><button class="btn sm gr" onclick="cls()">Batal</button>`);
+}
+async function sv(){
+ const u=window._u,d={nama:$('#f1').value,no_wa:$('#f2').value,id:$('#f3').value,password:$('#f4').value};
+ const r=await call('userAct',tok(),'edit',u.email,d);
+ if(!r||!r.ok)return toast(r?r.msg:'Gagal menyimpan.');
+ const x=mine(u.email),t=k=>String(d[k]).trim();
+ if(x){if(t('nama'))x.nama=t('nama');if(t('no_wa'))x.no_wa=t('no_wa');if(t('id'))x.id=t('id');if(t('password'))x.password=t('password');}
+ bUsers();
+ if(t('password')){askWa({nama:x?x.nama:u.nama,id:x?x.id:u.id,no_wa:x?x.no_wa:u.no_wa,password:t('password')},'Tersimpan');}
+ else{cls();toast('Tersimpan');}
+ loadUsers();
+}
+async function ua(act,i){
+ const u=ST.view[i];if(!u)return;
+ const r=await call('userAct',tok(),act,u.email,{});
+ if(!r||!r.ok)return toast(r?r.msg:'Gagal memproses.');
+ const x=mine(u.email);
+ if(x)x.status=({reject:'rejected',nonaktif:'nonaktif',aktif:'approved'})[act]||x.status;
+ bUsers();loadUsers();
+}
 
 /* ---------- admin: panel ---------- */
 function bPanel(){
@@ -239,7 +315,7 @@ function pick(f){
 }
 async function ss(){
  const r=await call('saveSettings',tok(),$('#s1').value,ST.logo);
- if(!r.ok)return toast(r.msg);ST.pub=r.pub;toast('Tersimpan');home();
+ if(!r.ok)return toast(r.msg);ST.pub=r.pub;lss('ahp',r.pub);const cc=lsg('ahc');if(cc){cc.pub=r.pub;lss('ahc',cc);}toast('Tersimpan');home();
 }
 boot();
 </script>
