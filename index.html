@@ -218,7 +218,7 @@ function pd(i){const p=ST.panels[i];cf(`Hapus panel "${p.judul}"?`,async()=>{awa
 function bSet(){
  ST.logo='';
  $('#bd').innerHTML=`<div class="card"><p style="margin-top:0;font-weight:800">Judul aplikasi</p>${fld('s1','Judul aplikasi',ST.pub.title)}
- <p style="font-weight:800">Logo (JPG/PNG/WEBP, otomatis dikompres &lt; 200 KB)</p>
+ <p style="font-weight:800">Logo (JPG/PNG/WEBP, otomatis dikecilkan agar loading cepat)</p>
  <input type="file" accept="image/png,image/jpeg,image/webp" onchange="pick(this.files[0])" style="margin-bottom:12px">
  <div class="logo" style="margin:0 auto 16px"><img id="pv" src="${ST.pub.logo||''}" style="${ST.pub.logo?'':'display:none'}" alt="Preview"></div>
  <button class="btn" onclick="ss()">Simpan pengaturan</button></div>`;
@@ -228,10 +228,10 @@ function pick(f){
  if(!/^image\/(png|jpeg|webp)$/.test(f.type))return toast('Format harus JPG, PNG, atau WEBP.');
  const im=new Image();
  im.onload=()=>{
-  const w=Math.min(512,im.width),h=Math.round(im.height*w/im.width),c=document.createElement('canvas');
+  const w=Math.min(192,im.width),h=Math.round(im.height*w/im.width),c=document.createElement('canvas');
   c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
-  let q=.9,d;do{d=c.toDataURL('image/jpeg',q);q-=.1;}while(d.length*.75>200*1024&&q>.25);
-  if(d.length*.75>200*1024){ST.logo='';return toast('Hasil kompres masih di atas 200 KB. Pilih gambar lain.');}
+  let q=.85,d;do{d=c.toDataURL('image/jpeg',q);q-=.1;}while(d.length*.75>60*1024&&q>.25);
+  if(d.length*.75>60*1024){ST.logo='';return toast('Hasil kompres masih di atas 60 KB. Pilih gambar lain.');}
   ST.logo=d;const pv=$('#pv');pv.src=d;pv.style.display='block';
  };
  im.onerror=()=>toast('File bukan gambar yang valid.');
